@@ -1,5 +1,6 @@
 """Common definitions and methods for the lumigator demo notebook."""
 
+import io
 import json
 import os
 from pathlib import Path
@@ -90,6 +91,24 @@ def get_job_status(response: requests.Response) -> UUID:
         return json.loads(response.text).get("status")
 
 
+def download_text_file(response: requests.Response) -> str:
+    """Downloads a text file from the API.
+
+    Given a response from an API `/download` URL, returns the
+    corresponding text file.
+    Can be used both for textual datasets and evaluation results/logs.
+    """
+    download_url = json.loads(response.text)["download_url"]
+    # boto3 returns download URLs with default port, CW does not have it
+    # (this is ugly but does not affect local or AWS setups)
+    download_url = download_url.replace(
+        "object.lga1.coreweave.com:4566", "object.lga1.coreweave.com"
+    )
+
+    download_response = make_request(download_url, verbose=False)
+    return download_response.text
+
+
 # - DATASETS ----------------------------------------------------------
 
 
@@ -104,6 +123,18 @@ def dataset_upload(filename: str) -> requests.Response:
 def dataset_info(dataset_id: UUID) -> requests.Response:
     r = make_request(f"{API_URL}/datasets/{dataset_id}")
     return r
+
+
+def dataset_download(dataset_id: UUID) -> str:
+    """Downloads a CSV dataset from the backend and returns a pandas df.
+
+    NOTE: currently limited to CSV (single-file) datasets, to be extended
+          with more general dataset types (e.g. HF datasets as we already
+          support their upload).
+    """
+    r = make_request(f"{API_URL}/datasets/{dataset_id}/download", verbose=False)
+    csv_dataset = download_text_file(r)
+    return pd.read_csv(io.StringIO(csv_dataset))
 
 
 # - EXPERIMENTS -------------------------------------------------------
@@ -160,15 +191,7 @@ def show_experiment_statuses(job_ids):
 
 def experiments_result_download(experiment_id: UUID) -> str:
     r = make_request(f"{API_URL}/experiments/{experiment_id}/result/download", verbose=False)
-    download_url = json.loads(r.text)["download_url"]
-    # boto3 returns download URLs with default port, CW does not have it
-    # (this is ugly but does not affect local or AWS setups)
-    download_url = download_url.replace(
-        "object.lga1.coreweave.com:4566", "object.lga1.coreweave.com"
-    )
-
-    download_response = make_request(download_url, verbose=False)
-    exp_results = json.loads(download_response.text)
+    exp_results = json.loads(download_text_file(r))
     return exp_results
 
 
