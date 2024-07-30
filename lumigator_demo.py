@@ -145,7 +145,7 @@ def experiments_submit(
     name: str,
     description: str | None,
     dataset_id: UUID,
-    max_samples: int = 10,
+    max_samples: int | None = None,
     system_prompt: str | None = None,
 ) -> requests.Response:
     if system_prompt is None and (
