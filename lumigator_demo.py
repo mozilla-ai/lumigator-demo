@@ -1,7 +1,6 @@
 """Common definitions and methods for the lumigator demo notebook."""
 
 import io
-import json
 import os
 from pathlib import Path
 from typing import Any, Dict  # noqa: UP035
@@ -240,16 +239,16 @@ def eval_results_to_table(models, eval_results):
 # - GROUND TRUTH -----------------------------------------------------------
 
 # Mistral Ground Truth
-def get_mistral_ground_truth(prompt: str) -> requests.Response.text:
-    text = make_request(f"{API_URL}/completions/mistral",method="POST", data=json.dumps({"text": prompt}))
-    return text
+def get_mistral_ground_truth(prompt: str) -> str:
+    response = make_request(f"{API_URL}/completions/mistral",method="POST", data=json.dumps({"text": prompt}))
+    return response.text
 
 def get_deployments() -> requests.Response:
-    r = make_request(f"{API_URL}/ground-truth/deployments")
-    return r
+    response = make_request(f"{API_URL}/ground-truth/deployments")
+    return response
 
-def get_bart_ground_truth(deployment_id: UUID, prompt:str) -> requests.Response.text:
-    text = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="POST", data=json.dumps({"text": prompt}))
-    return text
+def get_bart_ground_truth(deployment_id: UUID, prompt:str) -> str:
+    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="POST", data=json.dumps({"text": prompt}))
+    return response.text
 
 
