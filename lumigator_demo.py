@@ -241,7 +241,7 @@ def eval_results_to_table(models, eval_results):
 # Mistral Ground Truth
 def get_mistral_ground_truth(prompt: str) -> str:
     response = make_request(f"{API_URL}/completions/mistral",method="POST", data=json.dumps({"text": prompt}))
-    return response.text
+    return json.loads(response.text).get("text")
 
 def get_deployments() -> requests.Response:
     response = make_request(f"{API_URL}/ground-truth/deployments")
@@ -249,6 +249,6 @@ def get_deployments() -> requests.Response:
 
 def get_bart_ground_truth(deployment_id: UUID, prompt:str) -> str:
     response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="POST", data=json.dumps({"text": prompt}))
-    return response.text
+    return json.loads(response.text).get("text")
 
 
