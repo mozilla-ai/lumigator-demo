@@ -97,7 +97,7 @@ def download_text_file(response: requests.Response) -> str:
     corresponding text file.
     Can be used both for textual datasets and evaluation results/logs.
     """
-    download_url = json.loads(response.text)["download_url"]  
+    download_url = json.loads(response.text)["download_url"]
     download_response = make_request(download_url, verbose=False)
     return download_response.text
 
@@ -109,7 +109,9 @@ def dataset_upload(filename: str) -> requests.Response:
     with Path(filename).open("rb") as f:
         files = {"dataset": f}
         payload = {"format": "experiment"}
-        r = make_request(f"{API_URL}/datasets", method="POST", data=payload, files=files)
+        r = make_request(
+            f"{API_URL}/datasets", method="POST", data=payload, files=files
+        )
     return r
 
 
@@ -183,7 +185,9 @@ def show_experiment_statuses(job_ids):
 
 
 def experiments_result_download(experiment_id: UUID) -> str:
-    r = make_request(f"{API_URL}/experiments/{experiment_id}/result/download", verbose=False)
+    r = make_request(
+        f"{API_URL}/experiments/{experiment_id}/result/download", verbose=False
+    )
     exp_results = json.loads(download_text_file(r))
     return exp_results
 
@@ -229,31 +233,41 @@ def eval_results_to_table(models, eval_results):
 
     return pd.DataFrame(eval_table)
 
+
 # - GROUND TRUTH -----------------------------------------------------------
+
 
 # Mistral Ground Truth
 def get_mistral_ground_truth(prompt: str) -> str:
-    response = make_request(f"{API_URL}/completions/mistral",method="POST", data=json.dumps({"text": prompt}))
+    response = make_request(
+        f"{API_URL}/completions/mistral",
+        method="POST",
+        data=json.dumps({"text": prompt}),
+    )
     return json.loads(response.text).get("text")
 
-def create_deployment(gpus:float, replicas: float) -> str:
-    data = {
-    "num_gpus": gpus,
-    "num_replicas": replicas
-    }
-    headers = {
-    "accept": "application/json",
-    "Content-Type": "application/json"
-}
-    response = make_request(f"{API_URL}/ground-truth/deployments", headers=headers,data=json.dumps(data), method="POST")
+
+def create_deployment(gpus: float, replicas: float) -> str:
+    data = {"num_gpus": gpus, "num_replicas": replicas}
+    headers = {"accept": "application/json", "Content-Type": "application/json"}
+    response = make_request(
+        f"{API_URL}/ground-truth/deployments",
+        headers=headers,
+        data=json.dumps(data),
+        method="POST",
+    )
     return json.loads(response.text).get("id")
 
+
 def get_deployments() -> requests.Response:
-    response = make_request(f"{API_URL}/ground-truth/deployments" )
+    response = make_request(f"{API_URL}/ground-truth/deployments")
     return response
 
-def get_bart_ground_truth(deployment_id: UUID, prompt:str) -> str:
-    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="POST", data=json.dumps({"text": prompt}))
+
+def get_bart_ground_truth(deployment_id: UUID, prompt: str) -> str:
+    response = make_request(
+        f"{API_URL}/ground-truth/deployments/{deployment_id}",
+        method="POST",
+        data=json.dumps({"text": prompt}),
+    )
     return json.loads(response.text).get("text")
-
-
