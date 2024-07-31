@@ -1,11 +1,11 @@
 """Common definitions and methods for the lumigator demo notebook."""
 
 import io
-import json
 import os
 from pathlib import Path
 from typing import Any, Dict  # noqa: UP035
 from uuid import UUID
+import json
 
 import pandas as pd
 import requests
@@ -235,3 +235,20 @@ def eval_results_to_table(models, eval_results):
         eval_table.append(parse_model_results(model, results))
 
     return pd.DataFrame(eval_table)
+
+# - GROUND TRUTH -----------------------------------------------------------
+
+# Mistral Ground Truth
+def get_mistral_ground_truth(prompt: str) -> str:
+    response = make_request(f"{API_URL}/completions/mistral",method="POST", data=json.dumps({"text": prompt}))
+    return json.loads(response.text).get("text")
+
+def get_deployments() -> requests.Response:
+    response = make_request(f"{API_URL}/ground-truth/deployments")
+    return response
+
+def get_bart_ground_truth(deployment_id: UUID, prompt:str) -> str:
+    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="POST", data=json.dumps({"text": prompt}))
+    return json.loads(response.text).get("text")
+
+
