@@ -260,8 +260,13 @@ def create_deployment(gpus: float, replicas: float) -> str:
 
 
 def get_deployments() -> requests.Response:
-    response = make_request(f"{API_URL}/ground-truth/deployments")
+    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}")
     return response
+
+def delete_deployment(deployment_id:UUID) -> requests.Response:
+    response = make_request(f"{API_URL}/ground-truth/deployments/")
+    return response
+
 
 
 def get_bart_ground_truth(deployment_id: UUID, prompt: str) -> str:
