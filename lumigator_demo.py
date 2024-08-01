@@ -264,7 +264,7 @@ def get_deployments() -> requests.Response:
     return response
 
 def delete_deployment(deployment_id:UUID) -> requests.Response:
-    response = make_request(f"{API_URL}/ground-truth/deployments/")
+    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="DELETE")
     return response
 
 
