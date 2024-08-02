@@ -10,12 +10,11 @@ import json
 import pandas as pd
 import requests
 
-# URL where the API can be reached
+# APP URL
 API_HOST = os.environ["LUMIGATOR_SERVICE_HOST"]
 API_URL = f"http://{API_HOST}/api/v1"
 
-# URL of the Ray server
-# (this should not be directly available for the demo)
+# Ray URL
 RAY_HEAD_HOST = os.environ["RAYCLUSTER_KUBERAY_HEAD_SVC_PORT_8265_TCP_ADDR"]
 RAY_SERVER_URL = f"http://{RAY_HEAD_HOST}:8265"
 
@@ -99,12 +98,6 @@ def download_text_file(response: requests.Response) -> str:
     Can be used both for textual datasets and evaluation results/logs.
     """
     download_url = json.loads(response.text)["download_url"]
-    # boto3 returns download URLs with default port, CW does not have it
-    # (this is ugly but does not affect local or AWS setups)
-    download_url = download_url.replace(
-        "object.lga1.coreweave.com:4566", "object.lga1.coreweave.com"
-    )
-
     download_response = make_request(download_url, verbose=False)
     return download_response.text
 
@@ -116,7 +109,9 @@ def dataset_upload(filename: str) -> requests.Response:
     with Path(filename).open("rb") as f:
         files = {"dataset": f}
         payload = {"format": "experiment"}
-        r = make_request(f"{API_URL}/datasets", method="POST", data=payload, files=files)
+        r = make_request(
+            f"{API_URL}/datasets", method="POST", data=payload, files=files
+        )
     return r
 
 
@@ -125,7 +120,7 @@ def dataset_info(dataset_id: UUID) -> requests.Response:
     return r
 
 
-def dataset_download(dataset_id: UUID) -> str:
+def dataset_download(dataset_id: UUID) -> pd.DataFrame:
     """Downloads a CSV dataset from the backend and returns a pandas df.
 
     NOTE: currently limited to CSV (single-file) datasets, to be extended
@@ -190,7 +185,9 @@ def show_experiment_statuses(job_ids):
 
 
 def experiments_result_download(experiment_id: UUID) -> str:
-    r = make_request(f"{API_URL}/experiments/{experiment_id}/result/download", verbose=False)
+    r = make_request(
+        f"{API_URL}/experiments/{experiment_id}/result/download", verbose=False
+    )
     exp_results = json.loads(download_text_file(r))
     return exp_results
 
@@ -236,19 +233,45 @@ def eval_results_to_table(models, eval_results):
 
     return pd.DataFrame(eval_table)
 
+
 # - GROUND TRUTH -----------------------------------------------------------
+
 
 # Mistral Ground Truth
 def get_mistral_ground_truth(prompt: str) -> str:
-    response = make_request(f"{API_URL}/completions/mistral",method="POST", data=json.dumps({"text": prompt}))
+    response = make_request(
+        f"{API_URL}/completions/mistral",
+        method="POST",
+        data=json.dumps({"text": prompt}),
+    )
     return json.loads(response.text).get("text")
+
+
+def create_deployment(gpus: float, replicas: float) -> str:
+    data = {"num_gpus": gpus, "num_replicas": replicas}
+    headers = {"accept": "application/json", "Content-Type": "application/json"}
+    response = make_request(
+        f"{API_URL}/ground-truth/deployments",
+        headers=headers,
+        data=json.dumps(data),
+        method="POST",
+    )
+    return json.loads(response.text).get("id")
+
 
 def get_deployments() -> requests.Response:
-    response = make_request(f"{API_URL}/ground-truth/deployments")
+    response = make_request(f"{API_URL}/ground-truth/deployments/")
     return response
 
-def get_bart_ground_truth(deployment_id: UUID, prompt:str) -> str:
-    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="POST", data=json.dumps({"text": prompt}))
+def delete_deployment(deployment_id:UUID) -> requests.Response:
+    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="DELETE")
+    return response
+
+
+def get_bart_ground_truth(deployment_id: UUID, prompt: str) -> str:
+    response = make_request(
+        f"{API_URL}/ground-truth/deployments/{deployment_id}",
+        method="POST",
+        data=json.dumps({"text": prompt}),
+    )
     return json.loads(response.text).get("text")
-
-
