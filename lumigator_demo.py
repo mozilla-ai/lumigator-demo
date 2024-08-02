@@ -12,7 +12,7 @@ import requests
 
 # APP URL
 API_HOST = os.environ["LUMIGATOR_SERVICE_HOST"]
-API_URL = f"https://{API_HOST}/api/v1"
+API_URL = f"http://{API_HOST}/api/v1"
 
 # Ray URL
 RAY_HEAD_HOST = os.environ["RAYCLUSTER_KUBERAY_HEAD_SVC_PORT_8265_TCP_ADDR"]
@@ -260,7 +260,7 @@ def create_deployment(gpus: float, replicas: float) -> str:
 
 
 def get_deployments() -> requests.Response:
-    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}")
+    response = make_request(f"{API_URL}/ground-truth/deployments/")
     return response
 
 def delete_deployment(deployment_id:UUID) -> requests.Response:
