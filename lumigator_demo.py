@@ -11,12 +11,12 @@ import pandas as pd
 import requests
 
 # APP URL
-#
-API_URL = f"https://lumigator.mzai.dev/api/v1"
+API_HOST = os.environ["LUMIGATOR_SERVICE_HOST"]
+API_URL = f"http://{API_HOST}/api/v1"
 
 # Ray URL
-
-RAY_SERVER_URL = f"http://192.168.25.28:8265"
+RAY_HEAD_HOST = os.environ["RAYCLUSTER_KUBERAY_HEAD_SVC_PORT_8265_TCP_ADDR"]
+RAY_SERVER_URL = f"http://{RAY_HEAD_HOST}:8265"
 
 # base S3 path
 S3_BASE_PATH = "lumigator-storage/experiments/results/"
@@ -117,6 +117,10 @@ def dataset_upload(filename: str) -> requests.Response:
 
 def dataset_info(dataset_id: UUID) -> requests.Response:
     r = make_request(f"{API_URL}/datasets/{dataset_id}")
+    return r
+
+def get_datasets() -> requests.Response:
+    r = make_request(f"{API_URL}/datasets/")
     return r
 
 
@@ -237,16 +241,6 @@ def eval_results_to_table(models, eval_results):
 # - GROUND TRUTH -----------------------------------------------------------
 
 
-# Mistral Ground Truth
-def get_mistral_ground_truth(prompt: str) -> str:
-    response = make_request(
-        f"{API_URL}/completions/mistral",
-        method="POST",
-        data=json.dumps({"text": prompt}),
-    )
-    return json.loads(response.text).get("text")
-
-
 def create_deployment(gpus: float, replicas: float) -> str:
     data = {"num_gpus": gpus, "num_replicas": replicas}
     headers = {"accept": "application/json", "Content-Type": "application/json"}
@@ -271,11 +265,22 @@ def delete_deployment(deployment_id:UUID) -> requests.Response:
     response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="DELETE")
     return response
 
-
-def get_bart_ground_truth(deployment_id: UUID, prompt: str) -> str:
+def get_bart_ground_truth(deployment_id: UUID, prompt: str) -> dict:
     response = make_request(
         f"{API_URL}/ground-truth/deployments/{deployment_id}",
         method="POST",
         data=json.dumps({"text": prompt}),
+        verbose=False
     )
-    return json.loads(response.text).get("text")
+    data_dict = json.loads(response.text)
+    return data_dict
+
+def get_mistral_ground_truth(prompt: str) -> dict:
+    response = make_request(
+        f"{API_URL}/completions/mistral",
+        method="POST",
+        data=json.dumps({"text": prompt}),
+        verbose=False
+    )
+    data_dict = json.loads(response.text)
+    return data_dict
