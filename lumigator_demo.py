@@ -272,7 +272,7 @@ def get_bart_ground_truth(deployment_id: UUID, prompt: str) -> dict:
     response = make_request(
         f"{API_URL}/ground-truth/deployments/{deployment_id}",
         method="POST",
-        json=data,
+        data=json.dumps(data),
         verbose=False
     )
     return response
