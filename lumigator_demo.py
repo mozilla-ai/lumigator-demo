@@ -266,14 +266,16 @@ def delete_deployment(deployment_id:UUID) -> requests.Response:
     return response
 
 def get_bart_ground_truth(deployment_id: UUID, prompt: str) -> dict:
+
+    data = {'text': prompt}
+
     response = make_request(
         f"{API_URL}/ground-truth/deployments/{deployment_id}",
         method="POST",
-        data=json.dumps({"text": prompt}),
+        json=data,
         verbose=False
     )
-    data_dict = json.loads(response.text)
-    return data_dict
+    return response
 
 def get_mistral_ground_truth(prompt: str) -> dict:
     response = make_request(
