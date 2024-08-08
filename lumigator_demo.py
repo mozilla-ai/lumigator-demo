@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict  # noqa: UP035
 from uuid import UUID
 import json
+import numpy as np
 
 import pandas as pd
 import requests
@@ -20,6 +21,22 @@ RAY_SERVER_URL = f"http://{RAY_HEAD_HOST}:8265"
 
 # base S3 path
 S3_BASE_PATH = "lumigator-storage/experiments/results/"
+
+
+# EVAL_METRICS is a dict we use to show / refer to eval metrics
+# in pandas dataframes and when filtering by metric name.
+# The dict format is
+# "column name": [list of keys to get val in nested results dict]
+EVAL_METRICS = {
+    "Meteor": ["meteor", "meteor_mean"],
+    "BERT Precision": ["bertscore", "precision_mean"],
+    "BERT Recall": ["bertscore", "recall_mean"],
+    "BERT F1": ["bertscore", "f1_mean"],
+    "ROUGE-1": ["rouge", "rouge1_mean"],
+    "ROUGE-2": ["rouge", "rouge2_mean"],
+    "ROUGE-L": ["rouge", "rougeL_mean"],
+}
+
 
 # - BASE --------------------------------------------------------------
 
@@ -195,32 +212,22 @@ def experiments_result_download(experiment_id: UUID) -> str:
     exp_results = json.loads(download_text_file(r))
     return exp_results
 
+def eval_results_to_table(eval_results):
+    mi = pd.read_csv("model_info.csv")
 
-def eval_results_to_table(models, eval_results):
     """Format evaluation results jsons into one pandas dataframe."""
-    # metrics dict format is
-    # "column name": [list of keys to get val in nested results dict]
-    metrics = {
-        "Meteor": ["meteor", "meteor_mean"],
-        "BERT Precision": ["bertscore", "precision_mean"],
-        "BERT Recall": ["bertscore", "recall_mean"],
-        "BERT F1": ["bertscore", "f1_mean"],
-        "ROUGE-1": ["rouge", "rouge1_mean"],
-        "ROUGE-2": ["rouge", "rouge2_mean"],
-        "ROUGE-L": ["rouge", "rougeL_mean"],
-    }
-
-    def parse_model_results(model, results):
+    def parse_model_results(results):
         row = {}
 
         # remove prefix from model name
-        model_name = model.split("://")
-        if len(model_name) > 0:
-            model_name = model_name[1]
+        model = results['model']
+        model_name = model#.split("://")
+        # if len(model_name) > 0:
+        #     model_name = model_name[1]
 
         row["Model"] = model_name
 
-        for column, metric in metrics.items():
+        for column, metric in EVAL_METRICS.items():
             temp_results = results
             for key in metric:
                 value = temp_results.get(key)
@@ -229,14 +236,56 @@ def eval_results_to_table(models, eval_results):
                 temp_results = value
 
             row[column] = value
+
+        row["RAM_GB"] = mi[mi.model_name == model_name]['RAM_GB'].values[0]
+
         return row
 
     eval_table = []
-    for model, results in zip(models, eval_results, strict=True):
-        eval_table.append(parse_model_results(model, results))
+    for results in eval_results:
+        eval_table.append(parse_model_results(results))
 
     return pd.DataFrame(eval_table)
 
+
+def runs_to_eval_table(job_ids):
+    eval_results = []
+    for job_id in job_ids:
+        eval_results.append(experiments_result_download(job_id))
+
+    # return results as a pandas dataframe
+    return eval_results_to_table(eval_results)
+
+
+def show_best_worst(job_ids, model_name, metric_name):
+    """Shows best and worst results for a given model and metric."""
+
+    found = 0
+    for job_id in job_ids:
+        result = experiments_result_download(job_id)
+        if result['model'].endswith(model_name):
+            found = 1
+            break
+
+    if not found:
+        print(f"I could not find {model_name} between these jobs")
+
+    # look into result following the metric_name path
+    # defined in EVAL_METRICS
+    metric_vals = result
+
+    for k in metric_name.split("/"):
+        metric_vals = metric_vals[k]
+
+    worst_best_idx = [np.argmin(metric_vals), np.argmax(metric_vals)]
+
+    return pd.DataFrame(zip(
+        np.array(result['examples'])[worst_best_idx],
+        np.array(result['ground_truth'])[worst_best_idx],
+        np.array(result['predictions'])[worst_best_idx],
+        np.array(metric_vals)[worst_best_idx]
+        ), columns=['original', 'GT', 'prediction', metric_name]
+    )
 
 # - GROUND TRUTH -----------------------------------------------------------
 
