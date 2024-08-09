@@ -302,7 +302,6 @@ def create_deployment(gpus: float, replicas: float) -> str:
     )
     return json.loads(response.text).get("id")
 
-
 def get_deployments(verbose: bool = True) -> requests.Response:
     response = make_request(f"{API_URL}/ground-truth/deployments/", verbose=verbose)
     return response
@@ -310,6 +309,12 @@ def get_deployments(verbose: bool = True) -> requests.Response:
 def get_deployment_status(verbose: bool = True) -> requests.Response:
     response = make_request(f"{API_URL}/health/deployments", verbose=verbose)
     return response
+
+def get_summarizer_deployment_id():
+    """Gets the summarizer deployment id from ray serve."""
+    path = "applications/summarizer/deployed_app_config/args/description"
+    r = get_deployment_status(verbose=False)
+    return get_nested_value(json.loads(r.text), path)
 
 def delete_deployment(deployment_id:UUID) -> requests.Response:
     response = make_request(
