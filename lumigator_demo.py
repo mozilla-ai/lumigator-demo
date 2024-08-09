@@ -92,6 +92,13 @@ def make_request(
         raise
     return response
 
+def get_nested_value(dictionary, path, default_value=None):
+    val = dictionary
+    for key in path.split("/"):
+        val = val.get(key)
+        if val is None:
+            return default_value
+    return val
 
 def get_ray_link(job_id: UUID, RAY_SERVER_URL: str) -> str:
     return f"{RAY_SERVER_URL}/#/jobs/{job_id}"
@@ -126,20 +133,19 @@ def dataset_upload(filename: str) -> requests.Response:
     with Path(filename).open("rb") as f:
         files = {"dataset": f}
         payload = {"format": "experiment"}
-        r = make_request(
+        response = make_request(
             f"{API_URL}/datasets", method="POST", data=payload, files=files
         )
-    return r
+    return response
 
 
 def dataset_info(dataset_id: UUID) -> requests.Response:
-    r = make_request(f"{API_URL}/datasets/{dataset_id}")
-    return r
+    response = make_request(f"{API_URL}/datasets/{dataset_id}")
+    return response
 
 def get_datasets() -> requests.Response:
-    r = make_request(f"{API_URL}/datasets/")
-    return r
-
+    response = make_request(f"{API_URL}/datasets/")
+    return response
 
 def dataset_download(dataset_id: UUID) -> pd.DataFrame:
     """Downloads a CSV dataset from the backend and returns a pandas df.
@@ -148,8 +154,8 @@ def dataset_download(dataset_id: UUID) -> pd.DataFrame:
           with more general dataset types (e.g. HF datasets as we already
           support their upload).
     """
-    r = make_request(f"{API_URL}/datasets/{dataset_id}/download", verbose=False)
-    csv_dataset = download_text_file(r)
+    response = make_request(f"{API_URL}/datasets/{dataset_id}/download", verbose=False)
+    csv_dataset = download_text_file(response)
     return pd.read_csv(io.StringIO(csv_dataset))
 
 
@@ -178,18 +184,18 @@ def experiments_submit(
         "system_prompt": system_prompt,
     }
 
-    r = make_request(f"{API_URL}/experiments", method="POST", data=json.dumps(payload))
-    return r
+    response = make_request(f"{API_URL}/experiments", method="POST", data=json.dumps(payload))
+    return response
 
 
 def experiments_info(experiment_id: UUID) -> requests.Response:
-    r = make_request(f"{API_URL}/experiments/{experiment_id}")
-    return r
+    response = make_request(f"{API_URL}/experiments/{experiment_id}")
+    return response
 
 
 def experiments_status(experiment_id: UUID) -> str:
-    r = make_request(f"{API_URL}/health/jobs/{experiment_id}", verbose=False)
-    return get_job_status(r)
+    response = make_request(f"{API_URL}/health/jobs/{experiment_id}", verbose=False)
+    return get_job_status(response)
 
 
 def show_experiment_statuses(job_ids):
@@ -206,10 +212,10 @@ def show_experiment_statuses(job_ids):
 
 
 def experiments_result_download(experiment_id: UUID) -> str:
-    r = make_request(
+    response = make_request(
         f"{API_URL}/experiments/{experiment_id}/result/download", verbose=False
     )
-    exp_results = json.loads(download_text_file(r))
+    exp_results = json.loads(download_text_file(response))
     return exp_results
 
 def eval_results_to_table(eval_results):
@@ -219,12 +225,7 @@ def eval_results_to_table(eval_results):
     def parse_model_results(results):
         row = {}
 
-        # remove prefix from model name
-        model = results['model']
-        model_name = model#.split("://")
-        # if len(model_name) > 0:
-        #     model_name = model_name[1]
-
+        model_name = results['model']
         row["Model"] = model_name
 
         for column, metric in EVAL_METRICS.items():
@@ -302,16 +303,20 @@ def create_deployment(gpus: float, replicas: float) -> str:
     return json.loads(response.text).get("id")
 
 
-def get_deployments() -> requests.Response:
-    response = make_request(f"{API_URL}/ground-truth/deployments/")
+def get_deployments(verbose: bool = True) -> requests.Response:
+    response = make_request(f"{API_URL}/ground-truth/deployments/", verbose=verbose)
     return response
 
-def get_deployment_status() -> requests.Response:
-    response = make_request(f"{API_URL}/health/deployments")
+def get_deployment_status(verbose: bool = True) -> requests.Response:
+    response = make_request(f"{API_URL}/health/deployments", verbose=verbose)
     return response
 
 def delete_deployment(deployment_id:UUID) -> requests.Response:
-    response = make_request(f"{API_URL}/ground-truth/deployments/{deployment_id}", method="DELETE")
+    response = make_request(
+        f"{API_URL}/ground-truth/deployments/{deployment_id}",
+        method="DELETE",
+        verbose=False
+    )
     return response
 
 def get_bart_ground_truth(deployment_id: UUID, prompt: str) -> dict:
