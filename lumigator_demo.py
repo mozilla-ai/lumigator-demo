@@ -92,7 +92,7 @@ def make_request(
         raise
     return response
 
-def get_nested_value(dictionary, path, default_value=None):
+def get_nested_value(dictionary: dict, path: str, default_value=None) -> str:
     val = dictionary
     for key in path.split("/"):
         val = val.get(key)
