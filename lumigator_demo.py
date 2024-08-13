@@ -37,6 +37,9 @@ EVAL_METRICS = {
     "ROUGE-L": ["rouge", "rougeL_mean"],
 }
 
+# the following file contains information about different models
+# (currently just max RAM consumption on the TB inference task)
+MODEL_INFO_FILE = "assets/model_info.csv"
 
 # - BASE --------------------------------------------------------------
 
@@ -219,7 +222,7 @@ def experiments_result_download(experiment_id: UUID) -> str:
     return exp_results
 
 def eval_results_to_table(eval_results):
-    mi = pd.read_csv("model_info.csv")
+    mi = pd.read_csv(MODEL_INFO_FILE)
 
     """Format evaluation results jsons into one pandas dataframe."""
     def parse_model_results(results):
